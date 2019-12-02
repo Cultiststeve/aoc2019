@@ -19,5 +19,18 @@ with open(input_path) as input_file:
         intcode_computer.set_verb(2)
 
     result = intcode_computer.run_computer()
-    print(f"Result: {result}")
+    print(f"Part 1 result: {result}")
+
+    # Part 2
+    for noun in range(0, 100):
+        for verb in range(0, 100):
+            print(f"Noun: {noun}, Verb: {verb}")
+            intcode_computer.set_state(intcode_program_list)
+            intcode_computer.set_noun(noun)
+            intcode_computer.set_verb(verb)
+            res = intcode_computer.run_computer()
+
+            if res == 19690720:
+                print(100*noun + verb)
+                exit(0)
 
