@@ -49,7 +49,7 @@ wire_two_path = get_path(wire_two_route)
 print(wire_one_path)
 print(wire_two_path)
 
-crossings = set(wire_one_path.keys() & set(wire_two_path))
+crossings = (wire_one_path.keys() & (wire_two_path.keys()))
 # print(crossings)
 print(f"{len(crossings)} crossings")
 
