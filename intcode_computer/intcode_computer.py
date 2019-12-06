@@ -3,8 +3,42 @@ from typing import List
 
 class IntcodeComputer:
     def __init__(self, initial_state: List[int] = None):
-        self._state = initial_state
+        self._state = None
+        if initial_state:
+            self.set_state(initial_state)
         self._ip = 0
+        self.input_val = None
+
+        self.valid_opcodes = {
+            1: {"name": "addition",
+                "func": self._addition,
+                "num_params": 3,
+                "steps_foward": 4
+                },
+            2: {"name": "multiplication",
+                "func": self._multiplication,
+                "num_params": 3,
+                "steps_foward": 4
+                },
+            3: {"name": "input",
+                "func": self._input,
+                "num_params": 1,
+                "steps_foward": 2
+                },
+            4: {"name": "output",
+                "func": self._output,
+                "num_params": 1,
+                "steps_foward": 2
+                },
+            99: {"name": "end",
+                 "func": self._end,
+                 "num_params": 0,
+                 "steps_foward": 0
+                 }
+        }
+
+        self.param_modes = {0: "position",
+                            1: "immediatee"}
 
     def set_state(self, new_state: List[int]):
         self._state = list.copy(new_state)
@@ -34,59 +68,61 @@ class IntcodeComputer:
         if self._state is None:
             raise Exception("Set state before running computer")
 
+        self.input_val = input_val
+
         while True:
-            # print(x)
             instruction = str(self._state[self._ip])
             opcode = int(instruction[-2:])
 
-            if opcode in {1, 2, 4}:
-                # Opcodes with at least 1 parameter
-                params = []
-                for i in range(0, len(instruction) - 2):
-                    params.append(int(instruction[i]))
-                params.reverse()  # now param 1 is as position 0
+            if opcode not in self.valid_opcodes:
+                raise Exception(f"Opcode {opcode} not in recognised valid codes")
 
-                if len(params) >= 1 and params[0] == 1:  # immediate mode
-                    param_1 = self._state[self._ip + 1]
+            params = []
+            for i in range(1, self.valid_opcodes[opcode]["num_params"] + 1):
+                # For each paramter of the opcode
+                try:
+                    # Extract mode from initial instruction
+                    param_mode = int(instruction[-2-i:-2-i+1])
+                    assert param_mode in self.param_modes
+                except (IndexError, ValueError):
+                    param_mode = 0
+
+                if param_mode == 0:
+                    # position mode, so the paramter is the value of the state, at the position the IP points to
+                    params.append(self._state[self._state[self._ip + i]])
+                elif param_mode == 1:
+                    # immediate mode, param value is where the IP points to
+                    params.append(self._state[self._ip + i])
                 else:
-                    param_1 = self._state[self._state[self._ip + 1]]
+                    raise RuntimeError(f"Invalid param mode : {param_mode}")
 
-                if opcode in {1, 2}:
-                    # Opcodes with 2 params
-                    if len(params) >= 2 and params[1] == 1:  # immediate mode
-                        param_2 = self._state[self._ip + 2]
-                    else:
-                        param_2 = self._state[self._state[self._ip + 2]]
 
-                    if len(params) >= 3:
-                        assert params[2] == 0
 
-                assert len(params) <= 3
+            res = self.valid_opcodes[opcode]["func"](params)
+            if res is not None:
+                yield res
 
-            if opcode == 1:
-                # Addition
-                self._state[self._state[self._ip + 3]] = param_1 + param_2
-                self._ip += 4
-            elif opcode == 2:
-                # Multiplication
-                self._state[self._state[self._ip + 3]] = param_1 * param_2
-                self._ip += 4
-            elif opcode == 3:
-                # Input
-                if input_val is None:
-                    raise RuntimeError("Program required an input but none was given")
-                self._state[self._state[self._ip + 1]] = input_val
-                self._ip += 2
-                yield True
+            self._ip += self.valid_opcodes[opcode]["steps_foward"]
 
-            elif opcode == 4:
-                # Output
-                output_val = param_1
-                self._ip += 2
-                yield output_val
-            elif opcode == 99:
-                # Halt
-                yield False
-            else:
-                raise RuntimeError(f"Encountered unrecognised opcode {opcode}")
-            # print(self.state)
+    def _addition(self, params: List):
+        self._state[self._state[self._ip+3]] = params[0] + params[1]
+        return None
+
+    def _multiplication(self, params: List):
+        self._state[self._state[self._ip+3]] = params[0] * params[1]
+        return None
+
+    def _input(self, params: List[int]):
+        if self.input_val is None:
+            raise RuntimeError("Program required an input but none was given")
+        self._state[self._state[self._ip + 1]] = self.input_val
+        self._ip += 2
+        return True
+
+    def _output(self, param):
+        output_val = param
+        self._ip += 2
+        return output_val
+
+    def _end(self, params):
+        return False
