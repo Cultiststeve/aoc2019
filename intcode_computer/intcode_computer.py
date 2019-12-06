@@ -30,6 +30,26 @@ class IntcodeComputer:
                 "num_params": 1,
                 "steps_foward": 2
                 },
+            5: {"name": "jump-if-true",
+                "func": self._jump_if_true,
+                "num_params": 2,
+                "steps_foward": 3
+                },
+            6: {"name": "jump-if-false",
+                "func": self._jump_if_false,
+                "num_params": 2,
+                "steps_foward": 3
+                },
+            7: {"name": "less-than",
+                "func": self._less_than,
+                "num_params": 3,
+                "steps_foward": 4
+                },
+            8: {"name": "equals",
+                "func": self._equals,
+                "num_params": 3,
+                "steps_foward": 4
+                },
             99: {"name": "end",
                  "func": self._end,
                  "num_params": 0,
@@ -119,10 +139,30 @@ class IntcodeComputer:
         self._ip += 2
         return True
 
-    def _output(self, param):
-        output_val = param
+    def _output(self, params):
+        output_val = params[0]
         self._ip += 2
         return output_val
+
+    def _jump_if_true(self, params):
+        if params[0] != 0:
+            self._ip = params[1] - 3
+
+    def _jump_if_false(self, params):
+        if params[0] == 0:
+            self._ip = params[1] - 3
+
+    def _less_than(self, params):
+        if params[0] < params[1]:
+            self._state[self._state[self._ip+3]] = 1
+        else:
+            self._state[self._state[self._ip + 3]] = 0
+
+    def _equals(self, params):
+        if params[0] == params[1]:
+            self._state[self._state[self._ip + 3]] = 1
+        else:
+            self._state[self._state[self._ip + 3]] = 0
 
     def _end(self, params):
         return False
