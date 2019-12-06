@@ -78,7 +78,7 @@ class IntcodeComputer:
         Args:
             input_val:
 
-        Returns:
+        Yields:
             True if has just done an input command, and more work to do
             Value if has processed an output command
             False if reached a halt (99 op code)
@@ -116,15 +116,21 @@ class IntcodeComputer:
                 else:
                     raise RuntimeError(f"Invalid param mode : {param_mode}")
 
-
-
             res = self.valid_opcodes[opcode]["func"](params)
             if res is not None:
+                # if calculation returned something then need to pause execution to inform
+                # False = 99, end of program
+                # True = just used up input, request another
+                # integers = value to output
                 yield res
 
             self._ip += self.valid_opcodes[opcode]["steps_foward"]
 
     def _addition(self, params: List):
+        """
+        output / 3rd param is always positional mode, so its just assumed for all the funcs,
+        no need for parsed 3rd param
+        """
         self._state[self._state[self._ip+3]] = params[0] + params[1]
         return None
 
@@ -147,22 +153,26 @@ class IntcodeComputer:
     def _jump_if_true(self, params):
         if params[0] != 0:
             self._ip = params[1] - 3
+        return None
 
     def _jump_if_false(self, params):
         if params[0] == 0:
             self._ip = params[1] - 3
+        return None
 
     def _less_than(self, params):
         if params[0] < params[1]:
             self._state[self._state[self._ip+3]] = 1
         else:
             self._state[self._state[self._ip + 3]] = 0
+        return None
 
     def _equals(self, params):
         if params[0] == params[1]:
             self._state[self._state[self._ip + 3]] = 1
         else:
             self._state[self._state[self._ip + 3]] = 0
+        return None
 
     def _end(self, params):
         return False
