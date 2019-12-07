@@ -9,5 +9,5 @@ D)I
 E)J
 J)K
 K)L
-COM)YOU
-H)SAN
+K)YOU
+I)SAN
