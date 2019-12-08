@@ -2,12 +2,16 @@ from typing import List
 
 
 class IntcodeComputer:
-    def __init__(self, initial_state: List[int] = None):
+    def __init__(self,
+                 initial_state: List[int] = None,
+                 friendly_name : str = None):
         self._state = None
         if initial_state:
             self.set_state(initial_state)
         self._ip = 0
         self.next_input = None
+        if friendly_name:
+            self.friendly_name = friendly_name
 
         self.valid_opcodes = {
             1: {"name": "addition",
@@ -112,7 +116,7 @@ class IntcodeComputer:
                     raise RuntimeError(f"Invalid param mode : {param_mode}")
 
             res = self.valid_opcodes[opcode]["func"](params)
-            if res is not True:
+            if res is not True:  # Dont increase ip if we didnt carry out input because none was present
                 self._ip += self.valid_opcodes[opcode]["steps_foward"]
             if res is not None:
                 # if calculation returned something then need to pause execution to inform
@@ -142,7 +146,6 @@ class IntcodeComputer:
 
     def _output(self, params):
         output_val = params[0]
-        self._ip += 2
         return output_val
 
     def _jump_if_true(self, params):
