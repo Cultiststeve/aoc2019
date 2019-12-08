@@ -7,7 +7,7 @@ class IntcodeComputer:
         if initial_state:
             self.set_state(initial_state)
         self._ip = 0
-        self.input_val = None
+        self.next_input = None
 
         self.valid_opcodes = {
             1: {"name": "addition",
@@ -69,17 +69,14 @@ class IntcodeComputer:
     def set_verb(self, verb: int):
         self._state[2] = verb
 
-    def run_computer(self, input_val: int = None) -> int:
+    def run_computer(self) -> iter:
         """
         Runs through current state
 
         On input, puts given value in then returns True indicating more to do
 
-        Args:
-            input_val:
-
         Yields:
-            True if has just done an input command, and more work to do
+            True if computer requires an input
             Value if has processed an output command
             False if reached a halt (99 op code)
 
@@ -87,8 +84,6 @@ class IntcodeComputer:
         # print(self.state)
         if self._state is None:
             raise Exception("Set state before running computer")
-
-        self.input_val = input_val
 
         while True:
             instruction = str(self._state[self._ip])
@@ -99,16 +94,16 @@ class IntcodeComputer:
 
             params = []
             for i in range(1, self.valid_opcodes[opcode]["num_params"] + 1):
-                # For each paramter of the opcode
+                # For each parameter of the opcode
                 try:
                     # Extract mode from initial instruction
-                    param_mode = int(instruction[-2-i:-2-i+1])
+                    param_mode = int(instruction[-2 - i:-2 - i + 1])
                     assert param_mode in self.param_modes
                 except (IndexError, ValueError):
                     param_mode = 0
 
                 if param_mode == 0:
-                    # position mode, so the paramter is the value of the state, at the position the IP points to
+                    # position mode, so the parameter is the value of the state, at the position the IP points to
                     params.append(self._state[self._state[self._ip + i]])
                 elif param_mode == 1:
                     # immediate mode, param value is where the IP points to
@@ -117,33 +112,33 @@ class IntcodeComputer:
                     raise RuntimeError(f"Invalid param mode : {param_mode}")
 
             res = self.valid_opcodes[opcode]["func"](params)
+            if res is not True:
+                self._ip += self.valid_opcodes[opcode]["steps_foward"]
             if res is not None:
                 # if calculation returned something then need to pause execution to inform
                 # False = 99, end of program
-                # True = just used up input, request another
+                # True = requesting an input
                 # integers = value to output
                 yield res
-
-            self._ip += self.valid_opcodes[opcode]["steps_foward"]
 
     def _addition(self, params: List):
         """
         output / 3rd param is always positional mode, so its just assumed for all the funcs,
         no need for parsed 3rd param
         """
-        self._state[self._state[self._ip+3]] = params[0] + params[1]
+        self._state[self._state[self._ip + 3]] = params[0] + params[1]
         return None
 
     def _multiplication(self, params: List):
-        self._state[self._state[self._ip+3]] = params[0] * params[1]
+        self._state[self._state[self._ip + 3]] = params[0] * params[1]
         return None
 
     def _input(self, params: List[int]):
-        if self.input_val is None:
-            raise RuntimeError("Program required an input but none was given")
-        self._state[self._state[self._ip + 1]] = self.input_val
-        self._ip += 2
-        return True
+        if self.next_input is None:
+            return True
+        self._state[self._state[self._ip + 1]] = self.next_input
+        self.next_input = None
+        return None
 
     def _output(self, params):
         output_val = params[0]
@@ -162,7 +157,7 @@ class IntcodeComputer:
 
     def _less_than(self, params):
         if params[0] < params[1]:
-            self._state[self._state[self._ip+3]] = 1
+            self._state[self._state[self._ip + 3]] = 1
         else:
             self._state[self._state[self._ip + 3]] = 0
         return None
