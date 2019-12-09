@@ -9,6 +9,7 @@ class IntcodeComputer:
         if initial_state:
             self.set_state(initial_state)
         self._ip = 0
+        self._relative_base = 0
         self.next_input = None
         if friendly_name:
             self.friendly_name = friendly_name
@@ -53,6 +54,11 @@ class IntcodeComputer:
                 "func": self._equals,
                 "num_params": 3,
                 "steps_foward": 4
+                },
+            9: {"name": "relative-base-ofset",
+                "func": self._relative_base_offset,
+                "num_params": 1,
+                "steps_foward": 2
                 },
             99: {"name": "end",
                  "func": self._end,
@@ -104,14 +110,23 @@ class IntcodeComputer:
                     param_mode = int(instruction[-2 - i:-2 - i + 1])
                     assert param_mode in self.param_modes
                 except (IndexError, ValueError):
+                    # If not specified, default mode is 0
                     param_mode = 0
 
+                # self._ip + i  = position of parameter in intcode
+                # self._state[self._ip + i] = value of parameter
+                # self._state[self._state[self._ip + i]] = value at position of [value of parameter]
+
                 if param_mode == 0:
-                    # position mode, so the parameter is the value of the state, at the position the IP points to
+                    # position mode, so the parameter is the value of the state, at the position the parameter points to
+                    # parameter is found at the IP (current instruction) + parameter number
                     params.append(self._state[self._state[self._ip + i]])
                 elif param_mode == 1:
                     # immediate mode, param value is where the IP points to
                     params.append(self._state[self._ip + i])
+                elif param_mode == 2:
+                    # Relative mode - position mode but [value of parameter is modified by the rel-base
+                    params.append(self._state[self._state[self._ip + i] + self._relative_base])
                 else:
                     raise RuntimeError(f"Invalid param mode : {param_mode}")
 
@@ -123,54 +138,68 @@ class IntcodeComputer:
                 # False = 99, end of program
                 # True = requesting an input
                 # integers = value to output
-                yield res
+                return res
 
-    def _addition(self, params: List):
+    def _addition(self, params: List[int]):
         """
         output / 3rd param is always positional mode, so its just assumed for all the funcs,
         no need for parsed 3rd param
         """
+        assert len(params) is 3
         self._state[self._state[self._ip + 3]] = params[0] + params[1]
         return None
 
     def _multiplication(self, params: List):
+        assert len(params) is 3
         self._state[self._state[self._ip + 3]] = params[0] * params[1]
         return None
 
     def _input(self, params: List[int]):
+        assert len(params) is 1
         if self.next_input is None:
             return True
         self._state[self._state[self._ip + 1]] = self.next_input
         self.next_input = None
         return None
 
-    def _output(self, params):
+    def _output(self, params: List):
+        assert len(params) is 1
         output_val = params[0]
         return output_val
 
-    def _jump_if_true(self, params):
+    def _jump_if_true(self, params: List):
+        assert len(params) is 2
         if params[0] != 0:
             self._ip = params[1] - 3
         return None
 
-    def _jump_if_false(self, params):
+    def _jump_if_false(self, params: List):
+        assert len(params) is 2
         if params[0] == 0:
             self._ip = params[1] - 3
         return None
 
-    def _less_than(self, params):
+    def _less_than(self, params: List):
+        assert len(params) is 3
         if params[0] < params[1]:
             self._state[self._state[self._ip + 3]] = 1
         else:
             self._state[self._state[self._ip + 3]] = 0
         return None
 
-    def _equals(self, params):
+    def _equals(self, params: List):
+        assert len(params) is 3
         if params[0] == params[1]:
             self._state[self._state[self._ip + 3]] = 1
         else:
             self._state[self._state[self._ip + 3]] = 0
         return None
 
-    def _end(self, params):
+    def _relative_base_offset(self, params: List):
+        assert len(params) is 1
+        self._relative_base +=params[0]
+        return None
+
+    def _end(self, params: List):
+        assert len(params) is 0
         return False
