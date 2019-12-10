@@ -13,6 +13,6 @@ while res is not False:
     res = ic.run_computer()
     output.append(res)
     if res is True:
-        ic.next_input = 1
+        ic.next_input = 2
 
 print(output)
