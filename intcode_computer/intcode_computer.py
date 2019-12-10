@@ -1,15 +1,32 @@
 from typing import List
 
+
 class IntcodeComputer:
+    """
+    Defines a functional 'intcode' computer for Advent of code 2019
+    https://adventofcode.com
+
+    Works as an interpreter for the intcode language created for the coding challenge
+
+    The computer can be given an initial state or set at any point
+    When ran, the computer processes opcodes until:
+        input command, and no input is ready, in whichcase 'True' is returned
+        output command, in which case the output value is returned
+        halt command, in which case 'False' is returned
+
+    # TODO logging
+    """
+
     def __init__(self,
                  initial_state: List[int] = None,
                  friendly_name: str = None):
         self._state = None
         if initial_state:
             self.set_state(initial_state)
-        self._ip = 0
-        self._relative_base = 0
-        self.next_input = None
+        self._ip = 0  # Instruction pointer
+        self._relative_base = 0  # Relative base for [2] relative mode params
+        # TODO make next_input into a queue
+        self.next_input = None  # When processing input opcode, input is this var
         if friendly_name:
             self.friendly_name = friendly_name
 
@@ -70,8 +87,9 @@ class IntcodeComputer:
                             1: "immediate",
                             2: "relative"}
 
-    def set_state(self, new_state: List[int]):
+    def set_state(self, new_state: List[int], instruction_pointer=0):
         self._state = list.copy(new_state)
+        self._ip = instruction_pointer
 
     def get_memory_location(self, location: int):
         assert location >= 0
@@ -81,20 +99,26 @@ class IntcodeComputer:
             return 0
 
     def set_memory_location(self, location: int, value: int):
+        """
+        Sets the location given to the value
+
+        If the location is un-initilised, extends the state to cover the new range
+        values initialised with 0 according to spec
+        Args:
+            location: location in intcode state to store given value
+            value: value to store in given location
+        """
         assert location >= 0
         # print(f"Writing to loc {location}")
         if location >= len(self._state):
             # print(f"Pre-expand len {len(self._state)}")
             self._state += [0] * (location - len(self._state) + 1)
             # print(f"Post-expand len {len(self._state)}")
-
         self._state[location] = value
 
     def run_computer(self) -> iter:
         """
         Runs through current state
-
-        On input, puts given value in then returns True indicating more to do
 
         Yields:
             True if computer requires an input
@@ -102,7 +126,6 @@ class IntcodeComputer:
             False if reached a halt (99 op code)
 
         """
-        # print(self.state)
         if self._state is None:
             raise Exception("Set state before running computer")
 
@@ -118,8 +141,8 @@ class IntcodeComputer:
                 # For each parameter of the opcode
                 try:
                     # Extract mode from initial instruction
-                    test = -3-i
-                    param_mode = int(instruction[-3-i])
+                    test = -3 - i
+                    param_mode = int(instruction[-3 - i])
                     assert param_mode in self.param_modes
                 except (IndexError, ValueError):
                     # If not specified, default mode is 0
@@ -133,7 +156,7 @@ class IntcodeComputer:
                     # immediate mode, param value is where the IP points to
                     params.append(self._ip + i + 1)
                 elif param_mode == 2:
-                    # Relative mode - position mode but value of location(indicated by parameter) is modified by the rel-base
+                    # Relative mode - position mode but location is modified by the rel-base
                     params.append(self.get_memory_location(location=self._ip + i + 1) + self._relative_base)
                 else:
                     raise RuntimeError(f"Invalid param mode : {param_mode}")
@@ -141,23 +164,20 @@ class IntcodeComputer:
             res = self.valid_opcodes[opcode]["func"](params)
             if res is not None:
                 # if calculation returned something then need to pause execution to inform
-                # False = 99, end of program
-                # True = requesting an input
-                # integers = value to output
                 return res
 
+    # --- Start of opcode functions --- #
+    # All functions take a single argument, a list of parameters they require
+    # parameters are asserted they contain the correct number of parameter values for the given opcode (as defined in spec)
+
     def _addition(self, params: List[int]):
-        """
-        output / 3rd param is always positional mode, so its just assumed for all the funcs,
-        no need for parsed 3rd param
-        """
         assert len(params) == self.valid_opcodes[1]["num_params"]
         self.set_memory_location(location=params[2],
                                  value=self.get_memory_location(params[0]) + self.get_memory_location(params[1]))
         self._ip += self.valid_opcodes[1]["steps_forward"]
         return None
 
-    def _multiplication(self, params: List):
+    def _multiplication(self, params: List[int]):
         assert len(params) == self.valid_opcodes[2]["num_params"]
         self.set_memory_location(location=params[2],
                                  value=self.get_memory_location(params[0]) * self.get_memory_location(params[1]))
@@ -173,13 +193,13 @@ class IntcodeComputer:
         self._ip += self.valid_opcodes[3]["steps_forward"]
         return None
 
-    def _output(self, params: List):
+    def _output(self, params: List[int]):
         assert len(params) == 1
         output_val = self.get_memory_location(params[0])
         self._ip += self.valid_opcodes[4]["steps_forward"]
         return output_val
 
-    def _jump_if_true(self, params: List):
+    def _jump_if_true(self, params: List[int]):
         assert len(params) == 2
         if self.get_memory_location(location=params[0]) != 0:
             self._ip = self.get_memory_location(location=params[1])
@@ -188,7 +208,7 @@ class IntcodeComputer:
             self._ip += self.valid_opcodes[5]["steps_forward"]
             return None
 
-    def _jump_if_false(self, params: List):
+    def _jump_if_false(self, params: List[int]):
         assert len(params) == 2
         if self.get_memory_location(location=params[0]) == 0:
             self._ip = self.get_memory_location(location=params[1])
@@ -197,7 +217,7 @@ class IntcodeComputer:
             self._ip += self.valid_opcodes[6]["steps_forward"]
             return None
 
-    def _less_than(self, params: List):
+    def _less_than(self, params: List[int]):
         assert len(params) == 3
         if self.get_memory_location(params[0]) < self.get_memory_location(params[1]):
             self.set_memory_location(location=params[2], value=1)
@@ -206,7 +226,7 @@ class IntcodeComputer:
         self._ip += self.valid_opcodes[7]["steps_forward"]
         return None
 
-    def _equals(self, params: List):
+    def _equals(self, params: List[int]):
         assert len(params) == 3
         if self.get_memory_location(params[0]) == self.get_memory_location(params[1]):
             self.set_memory_location(location=params[2], value=1)
@@ -215,12 +235,13 @@ class IntcodeComputer:
         self._ip += self.valid_opcodes[8]["steps_forward"]
         return None
 
-    def _relative_base_offset(self, params: List):
+    def _relative_base_offset(self, params: List[int]):
         assert len(params) == 1
         self._relative_base += self.get_memory_location(params[0])
         self._ip += self.valid_opcodes[9]["steps_forward"]
         return None
 
-    def _end(self, params: List):
+    @staticmethod
+    def _end(params: List):
         assert len(params) == 0
         return False
