@@ -10,7 +10,7 @@ class IntcodeComputer:
 
     The computer can be given an initial state or set at any point
     When ran, the computer processes opcodes until:
-        input command, and no input is ready, in whichcase 'True' is returned
+        input command, and no input is ready, in which case 'True' is returned
         output command, in which case the output value is returned
         halt command, in which case 'False' is returned
 
