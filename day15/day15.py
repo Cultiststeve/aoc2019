@@ -11,9 +11,6 @@ with open(input_path) as input_file:
     intcode_program_list = [int(x) for x in input_string.split(sep=',')]
 
 
-
-
-
 def update_screen(x, y, type, tkinter_root):
     """
 
@@ -43,6 +40,7 @@ def update_screen(x, y, type, tkinter_root):
     tkinter_root.update_idletasks()
     tkinter_root.update()
 
+
 class RemoteRobot:
 
     def __init__(self):
@@ -53,15 +51,19 @@ class RemoteRobot:
         self.draw_robot()
         self.known_space = {(self.x, self.y): 1}  # dict of position tuples, value is wall/floor/oyxgen
 
+        path = list()
+        path.append((self.x, self.y))
+        self.distance_moved = 0
+
     def draw_robot(self):
         update_screen(self.x, self.y, 2, root_window)
 
     def set_random_direction(self):
-        self.direction = random.randint(1,4)
+        self.direction = random.randint(1, 4)
         print(f"Set new direction to {self.direction}")
 
     def set_smart_direction(self):
-        if (self.x, self.y+1) not in self.known_space.keys():
+        if (self.x, self.y + 1) not in self.known_space.keys():
             # North
             self.direction = 1
             return
@@ -69,33 +71,33 @@ class RemoteRobot:
             # South
             self.direction = 2
             return
-        if (self.x-1, self.y) not in self.known_space.keys():
+        if (self.x - 1, self.y) not in self.known_space.keys():
             # west
             self.direction = 3
             return
-        if (self.x+1, self.y) not in self.known_space.keys():
+        if (self.x + 1, self.y) not in self.known_space.keys():
             # east
             self.direction = 4
             return
 
         best_direction = None
         min_steps_arround = 999
-        if self.known_space[(self.x, self.y+1)] < min_steps_arround:
-            if self.known_space[(self.x, self.y+1)] >= 0:
+        if self.known_space[(self.x, self.y + 1)] < min_steps_arround:
+            if self.known_space[(self.x, self.y + 1)] >= 0:
                 best_direction = 1
-                min_steps_arround = self.known_space[(self.x, self.y+1)]
-        if self.known_space[(self.x, self.y-1)] < min_steps_arround:
-            if self.known_space[(self.x, self.y-1)] >= 0:
+                min_steps_arround = self.known_space[(self.x, self.y + 1)]
+        if self.known_space[(self.x, self.y - 1)] < min_steps_arround:
+            if self.known_space[(self.x, self.y - 1)] >= 0:
                 best_direction = 2
-                min_steps_arround = self.known_space[(self.x, self.y-1)]
-        if self.known_space[(self.x-1, self.y)] < min_steps_arround:
-            if self.known_space[(self.x-1, self.y)] >= 0:
+                min_steps_arround = self.known_space[(self.x, self.y - 1)]
+        if self.known_space[(self.x - 1, self.y)] < min_steps_arround:
+            if self.known_space[(self.x - 1, self.y)] >= 0:
                 best_direction = 3
-                min_steps_arround = self.known_space[(self.x-1, self.y)]
-        if self.known_space[(self.x+1, self.y)] < min_steps_arround:
-            if self.known_space[(self.x+1, self.y)] >= 0:
+                min_steps_arround = self.known_space[(self.x - 1, self.y)]
+        if self.known_space[(self.x + 1, self.y)] < min_steps_arround:
+            if self.known_space[(self.x + 1, self.y)] >= 0:
                 best_direction = 4
-                min_steps_arround = self.known_space[(self.x+1, self.y)]
+                min_steps_arround = self.known_space[(self.x + 1, self.y)]
         if best_direction:
             self.direction = best_direction
             return
@@ -132,32 +134,31 @@ class RemoteRobot:
             self.known_space[(self.x, self.y)] += 1
         else:
             self.known_space[(self.x, self.y)] = 1
+        self.distance_moved += 1
 
     def wall_in_move_dir(self):
         if self.direction == 1:
             # North
-            update_screen(self.x, self.y+1, 1, root_window)
-            self.known_space[(self.x, self.y+1)] = -1
+            update_screen(self.x, self.y + 1, 1, root_window)
+            self.known_space[(self.x, self.y + 1)] = -1
         elif self.direction == 2:
             # South
-            update_screen(self.x, self.y-1, 1, root_window)
-            self.known_space[(self.x, self.y-1)] = -1
+            update_screen(self.x, self.y - 1, 1, root_window)
+            self.known_space[(self.x, self.y - 1)] = -1
         elif self.direction == 3:
             # west
-            update_screen(self.x-1, self.y, 1, root_window)
-            self.known_space[(self.x-1, self.y)] = -1
+            update_screen(self.x - 1, self.y, 1, root_window)
+            self.known_space[(self.x - 1, self.y)] = -1
         elif self.direction == 4:
             # east
-            update_screen(self.x+1, self.y, 1, root_window)
-            self.known_space[(self.x+1, self.y)] = -1
+            update_screen(self.x + 1, self.y, 1, root_window)
+            self.known_space[(self.x + 1, self.y)] = -1
         else:
             raise RuntimeError(f"Direction was {self.direction}, not 1-4")
 
 
-
 root_window = tkinter.Tk()
 robot = RemoteRobot()
-
 
 while True:
     res = robot.computer.run_computer()
@@ -174,7 +175,7 @@ while True:
     else:
         # Must have returned a status code
         assert type(res) is int
-        assert 0 <= res <=2
+        assert 0 <= res <= 2
 
         if res == 1:
             # Robot moved in direction
@@ -185,6 +186,7 @@ while True:
         elif res == 2:
             print(f"Found oyxgen place!")
             robot.update_postion(oxygen=True)
+            print(f"Took {robot.distance_moved} moves to get here")
             break
 
 root_window.mainloop()
