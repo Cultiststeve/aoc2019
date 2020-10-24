@@ -1,6 +1,6 @@
 # Cultiststeve's solutions for Advent of Code 2019
 
-Not optimised or neat / reviewd cocde. Usually just my first draft that produced a solution.
+Not optimised or neat / reviewed code. Usually just my first draft that produced a solution.
 
 Python 3.8.0, pycharm
 
