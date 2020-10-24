@@ -1,8 +1,8 @@
 # Cultiststeve's solutions for Advent of Code 2019
 
-Not optimised or neat / reviewed code. Usually just my first draft that produced a solution.
+Not optimised or neat / reviewed code. The code is usually just my first draft that produced a solution and definatly not built with longitivty in mind.
 
-Python 3.8.0, pycharm
+Code developed using  Python 3.8.0 in pycharm.
 
 # Intcode computer
 Spent a little longer making this neat as its used so much.
