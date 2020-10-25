@@ -10,6 +10,8 @@ Includes some pytests, running various day's examples to ensure it produces corr
 Should also be mostly docstring'd and commented.
 
 ## Day 15 solution
+*This day was the remote intcode robot searching for an oxygen leak, working out the shortest path then seeing how long it took to refill the entire maze.*
+
 This day made a nice GIF (also pretty useful for debugging).
 ![day-15-solution-gif](day15/solution.gif)
 
